@@ -1,8 +1,7 @@
 # GLaDOS automatic check-in via GitHub Actions
 #
-# Schedule times are UTC. Beijing time (UTC+8) equivalents:
-#   - 23:15 UTC → 07:15 北京时间（次日凌晨前一天的 UTC 对应早上签到）
-#   - 07:15 UTC → 15:15 北京时间
+# Schedule time is UTC. Beijing time (UTC+8) equivalent:
+#   - 01:30 UTC → 09:30 北京时间
 #
 # GitHub may delay or skip schedule triggers on inactive forks.
 # Use workflow_dispatch for manual runs, or an external cron that POSTs
@@ -12,10 +11,8 @@ name: GLaDOS Check-in
 
 on:
   schedule:
-    # 07:15 Beijing (UTC+8) = 23:15 UTC
-    - cron: "15 23 * * *"
-    # 15:15 Beijing (UTC+8) = 07:15 UTC
-    - cron: "15 7 * * *"
+    # 09:30 Beijing (UTC+8) = 01:30 UTC
+    - cron: "30 1 * * *"
   workflow_dispatch:
 
 permissions:

@@ -1,0 +1,56 @@
+# Keep public-fork scheduled workflows active by creating a tiny repository
+# activity at most once every 30 days. The workflow itself checks daily because
+# cron day-of-month expressions are not true 30-day intervals.
+
+name: Repository Keepalive
+
+on:
+  schedule:
+    # Daily check at 10:45 Beijing (02:45 UTC); commit only when due.
+    - cron: "45 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Update 30-day keepalive marker when due
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker=".github/keepalive/last-run.txt"
+          now="$(date -u +%s)"
+
+          if [[ -f "$marker" ]]; then
+            last="$(date -u -d "$(tr -d '\r\n' < "$marker")" +%s 2>/dev/null || echo 0)"
+          else
+            last=0
+          fi
+
+          if (( now - last < 2592000 )); then
+            echo "Keepalive marker is younger than 30 days; no commit needed."
+            exit 0
+          fi
+
+          mkdir -p "$(dirname "$marker")"
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > "$marker"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$marker"
+
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+
+          git commit -m "chore: update keepalive marker"
+          git push

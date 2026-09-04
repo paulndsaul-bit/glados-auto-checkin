@@ -28,7 +28,7 @@ Supports **ScriptCat · Surge · Quantumult X · GitHub Actions** and all 7 GLaD
 ## Highlights
 
 - **Multiple platforms**: browsers, Surge, Quantumult X, and GitHub Actions
-- **Multiple accounts**: ScriptCat checks different accounts logged in on different main-site domains; GitHub Actions accepts multiple cookies with per-account domains
+- **Multiple accounts**: ScriptCat checks different accounts logged in on different main-site domains; this project's first GitHub Actions version is intentionally single-account
 - **No manual cookie entry** (local options): uses your browser session or captures credentials via your proxy app
 - **Optional cloud run**: GitHub Actions accepts one or more account cookies via a Repository Secret
 - **Smart fallback**: skips later local tasks after a successful day; within a single Actions run, successful/already-checked accounts are not checked in again
@@ -45,7 +45,7 @@ Choose one method for your environment. You do not need every option.
 | **Browser (ScriptCat)** | Multiple accounts on different main-site domains | Reuses browser sessions without copying cookies | Multiple accounts; regular Chrome / Edge / Firefox use | No | No | [View setup](#chrome--edge--firefox) |
 | **Surge module** | One account; the latest captured account replaces the previous one | Runs locally without a background browser | Regular Surge use with one account | Yes | No | [View setup](#surge) |
 | **Quantumult X config** | One account; the latest captured account replaces the previous one | Fits an existing Rewrite and scheduled-task setup | Regular Quantumult X use with one account | Yes | No | [View setup](#quantumult-x) |
-| **GitHub Actions** | Multiple accounts with an optional domain per account | Runs in the cloud without a browser or proxy app | Multiple accounts; no always-on local device | No | Yes (Secret) | [View setup](#github-actions) |
+| **GitHub Actions** | One account; cookie injected through a Secret | Runs in the cloud without a browser or proxy app | No always-on local device | No | Yes (Secret) | [View setup](#github-actions) |
 
 ### Chrome / Edge / Firefox
 
@@ -59,7 +59,7 @@ The browser version is a background scheduled script for [ScriptCat](https://doc
 
 The first two script-menu commands are **Check in now** and **View signed-in accounts**. The first runs a complete check-in and uses the existing notification settings. The second shows each signed-in domain and masked email in a local browser notification only; it does not read or display cookie contents or send this status to remote notification channels.
 
-The script schedules candidate runs every five minutes from `00:05` through `23:55`. Each run scans all six domains, deduplicates sessions by email, and checks in every discovered account. ScriptCat's `once` mechanism skips later candidates only after all discovered accounts complete; partial network failures remain eligible for a later retry.
+The script schedules candidate runs every five minutes from `00:05` through `23:55`. Each run scans all seven domains, deduplicates sessions by email, and checks in every discovered account. ScriptCat's `once` mechanism skips later candidates only after all discovered accounts complete; partial network failures remain eligible for a later retry.
 
 ScriptCat does not store account cookies. Once you sign out of a domain or its session expires, that domain's account is no longer discovered or checked in.
 
@@ -118,7 +118,7 @@ curl -fsSL 'https://raw.githubusercontent.com/Walvez/glados-auto-checkin/refs/he
 
 ### GitHub Actions
 
-Use this when you do not want a browser, Surge, or Quantumult X running locally. After setup, GitHub performs the scheduled check-in in the cloud. Whether you have one account or several, you create only one Repository Secret named `GLADOS_COOKIE`.
+Use this when you do not want a browser, Surge, or Quantumult X running locally. After setup, GitHub performs the scheduled check-in in the cloud. This first version is configured for one account and uses one Repository Secret named `GLADOS_COOKIE`.
 
 > [!NOTE]
 > A fork does not inherit Secrets from its parent repository. Configure the cookie only in **your own fork**—never put it in source code, an issue, or a public log.
@@ -129,9 +129,9 @@ Use this when you do not want a browser, Surge, or Quantumult X running locally.
 2. Open the fork and verify the repository owner shown at the top is your username.
 3. Open the **Actions** tab. Scheduled workflows may be disabled on a new public fork; enable workflows if GitHub shows that prompt.
 
-#### 2. Copy the cookie for each account
+#### 2. Copy the cookie for one account
 
-Repeat these steps for every account:
+Do this once for the account you want to check in:
 
 1. Sign in on the main-site domain you plan to use, such as [glados.cloud](https://glados.cloud) or [glados.rocks](https://glados.rocks).
 2. Press `F12`, open **Network**, and refresh the GLaDOS page.
@@ -142,7 +142,7 @@ Repeat these steps for every account:
    koa:sess=...; koa:sess.sig=...
    ```
 
-5. Record the current domain as well. For multiple accounts, copy each cookie from the domain where that account is signed in.
+5. Record the current domain as well. Do not send the cookie to ChatGPT or put it in source code, issues, pull requests, or logs.
 
 A cookie is a login credential and may expire after several weeks. Never publish it or send it to another person.
 
@@ -151,42 +151,15 @@ A cookie is a login credential and may expire after several weeks. Never publish
 1. In **your fork**, open **Settings → Secrets and variables → Actions**.
 2. Under **Repository secrets**, click **New repository secret**.
 3. Enter the case-sensitive name `GLADOS_COOKIE`.
-4. Paste this JSON into **Secret**. This format is recommended even for one account:
-
-```json
-[
-  {"name": "primary", "origin": "https://glados.cloud", "cookie": "koa:sess=...; koa:sess.sig=..."},
-  {"name": "secondary", "origin": "https://glados.rocks", "cookie": "koa:sess=...; koa:sess.sig=..."}
-]
-```
-
-5. Click **Add secret**. Multiple accounts still use this one Secret; do not create `GLADOS_COOKIE_1` or `GLADOS_COOKIE_2`.
-
-| Field | Required | Purpose |
-| :--- | :---: | :--- |
-| `name` | No | A label used only in redacted logs |
-| `origin` | Recommended | The domain that issued this cookie; credentials are sent only to that supported official domain |
-| `cookie` | Yes | The complete Cookie value copied from Request Headers |
-
-`origin` accepts only the six supported HTTPS main sites. If omitted, the CLI probes all six, but an explicit origin is recommended when different domains hold different accounts.
-
-<details>
-<summary><strong>Other compatible Secret formats</strong></summary>
-
-A single raw cookie, a JSON array of cookie strings, and one full cookie per line are also supported:
-
-```json
-["koa:sess=account1...; koa:sess.sig=...", "koa:sess=account2...; koa:sess.sig=..."]
-```
+4. Paste the complete cookie value directly into **Secret**, without the `Cookie:` prefix and without JSON:
 
 ```text
-koa:sess=account1...; koa:sess.sig=...
-koa:sess=account2...; koa:sess.sig=...
+koa:sess=<your-cookie-value>; koa:sess.sig=<your-signature>
 ```
 
-Do not use `&` as an account separator because cookie values may contain it. Empty or invalid input fails fast, and logs never print complete cookies.
+5. Click **Add secret**. This first version uses this one Secret for one account.
 
-</details>
+If no domain is specified in the Secret, the CLI probes supported domains automatically; the cookie is still sent only to the GLaDOS official domain where it is recognized. Empty input fails fast, and logs never print the complete cookie.
 
 #### 4. Run once and verify
 
@@ -194,29 +167,32 @@ Do not use `&` as an account separator because cookie values may contain it. Emp
 2. Click **Enable workflow** first if it appears.
 3. Click **Run workflow**, keep the branch set to `main`, then click the green **Run workflow** button.
 4. Open the new run and wait for `Run GLaDOS check-in` to finish.
-5. A green check means every account succeeded or was already checked in. The log reports the account count while redacting credentials.
+5. A green check means the check-in succeeded or was already completed today. Logs never print the complete cookie.
 
-If one account fails, the script still processes the rest, but the overall job is red so the expired credential is visible.
+If the account fails, the job is red so an expired credential is visible.
 
 #### 5. Automatic schedule
 
-The workflow runs twice per day. GitHub `schedule` uses **UTC**:
+The check-in workflow runs once per day. GitHub `schedule` uses **UTC**:
 
 | Cron (UTC) | Beijing time (UTC+8) | Role |
 | :--- | :--- | :--- |
-| `15 23 * * *` | **07:15** | Morning candidate |
-| `15 7 * * *` | **15:15** | Afternoon fallback |
+| `30 1 * * *` | **09:30** | Fixed check-in |
 
-Within **one run**, an account that already succeeded or was already checked in is not checked in again. Across the two daily schedules, a second run that receives “already checked in” still exits `0`.
+If the account was already checked in today, the API returns “already checked in” and the process still exits `0`. GitHub may queue scheduled jobs, so the job is not guaranteed to start at the exact minute.
 
 > [!WARNING]
 > GitHub documents that scheduled workflows are disabled by default on public forks and may also be disabled after 60 days without repository activity. Re-enable the workflow and run it manually if the schedule stops. Scheduled jobs may also be queued and are not guaranteed to start at the exact minute. See [GitHub's workflow documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
 
-#### 6. Update an expired cookie
+#### 6. Keepalive workflow
 
-Sign in again on the corresponding domain, copy the new cookie, then edit the existing `GLADOS_COOKIE` under **Settings → Secrets and variables → Actions**. Replace that account's `cookie` value and save. No workflow-file change or additional Secret is needed.
+`Repository Keepalive` checks `.github/keepalive/last-run.txt` daily and commits a new UTC timestamp only when the previous marker is at least 30 days old. It updates only this dedicated file and never reads `GLADOS_COOKIE`. On its first run, it creates the marker; if the repository prevents workflows from writing contents, allow workflow content updates in the repository's Actions settings.
 
-#### 7. Local / CLI (optional)
+#### 7. Update an expired cookie
+
+Sign in again on the corresponding domain, copy the new cookie, then edit the existing `GLADOS_COOKIE` under **Settings → Secrets and variables → Actions**. Save it without changing the workflow. Do not send the cookie to ChatGPT.
+
+#### 8. Local / CLI (optional)
 
 Requires Node.js 18+ (Actions pins current LTS major **24**):
 
@@ -273,12 +249,14 @@ Detect session → Request check-in → Validate response → Read points and ex
 
 - ScriptCat scans all 7 main-site domains (`glados.network` → `glados.rocks` → `glados.one` → `glados.space` → `glados.cloud` → `glados.vip` → `glados-facility.com`), collects active sessions, deduplicates them by email, and checks each account in on its original domain before sending one summary notification.
 - Surge and Quantumult X capture credentials and the active origin from any of those main sites via MitM, and always send check-in requests to that same domain. Both remain single-account methods: newly captured credentials replace the previous account. They run at `07:15` and `15:15` by default.
-- GitHub Actions / CLI use the cookie secret. An account object with `origin` uses only that domain; entries without one probe all 7 domains with `glados.cloud` first. Each account checks in on its own logged-in origin, and the body token always matches the actual request hostname.
+- GitHub Actions / CLI use one cookie Secret in this first version. Without an explicit domain, the CLI probes all 7 domains with `glados.cloud` first, and the body token always matches the actual request hostname.
 - Unknown responses, HTML error pages, 401/403, 429, and 5xx responses are handled separately. Success is reported only when the script recognizes a check-in record or an explicit success state.
 
 ## Custom Schedule
 
-The default Cron expression is `15 7,15 * * *`, meaning 07:15 and 15:15 every day. To run only once at 07:15, use:
+The default Cron expression for Surge / Quantumult X is `15 7,15 * * *`, meaning 07:15 and 15:15 every day. GitHub Actions uses `.github/workflows/checkin.yml` and runs at 09:30 Beijing time (01:30 UTC).
+
+To run Surge / Quantumult X only once at 07:15, use:
 
 ```cron
 15 7 * * *
@@ -296,7 +274,7 @@ The default Cron expression is `15 7,15 * * *`, meaning 07:15 and 15:15 every da
 - Surge and Quantumult X store the cookie, authorization value, and active domain only in the proxy app's local persistent storage, and send them only to the corresponding official GLaDOS main-site domain (one of the 7 listed above).
 - Surge and Quantumult X do not call third-party notification services.
 - When explicitly enabled, ScriptCat remote notifications contain only a masked email, check-in result, points, and remaining days. They never include GLaDOS cookies or authorization values.
-- **GitHub Actions**: cookies live only in Repository Secret `GLADOS_COOKIE`; workflow permissions are minimal (`contents: read`); the CLI redacts cookies/Bearer tokens and the workflow never echoes the Secret. After forking, set Secrets on **your** repository—never put cookies in code or pull requests.
+- **GitHub Actions**: the cookie lives only in Repository Secret `GLADOS_COOKIE`; the check-in workflow uses minimal `contents: read`, while the keepalive workflow uses `contents: write` only to update its dedicated timestamp; the CLI redacts cookies/Bearer tokens and workflows never echo the Secret. After forking, set Secrets on **your** repository—never put cookies in code or pull requests.
 - The project includes no analytics, advertisements, referral links, or third-party executable code.
 
 <details>
@@ -374,7 +352,7 @@ Node.js 18+ is required. After cloning the repository, run:
 npm test
 ```
 
-Tests cover ScriptCat cross-domain multi-account discovery, same-account deduplication and partial-failure isolation, all 7 main-site domains, single-account Surge and Quantumult X runtimes, GitHub Actions / CLI (multi-account, per-account origin, missing secrets, domain fallback, cookie redaction, success / already-checked / failure exit codes), invalid JSON, 401/403 handling, 429 retries, 5xx handling, config hostname/regex coverage, stable update URLs, and notification boundaries.
+Tests cover ScriptCat cross-domain multi-account discovery, same-account deduplication and partial-failure isolation, all 7 main-site domains, single-account Surge and Quantumult X runtimes, GitHub Actions / CLI (single account, missing secrets, domain fallback, cookie redaction, success / already-checked / failure exit codes), invalid JSON, 401/403 handling, 429 retries, 5xx handling, config hostname/regex coverage, stable update URLs, the keepalive workflow, and notification boundaries.
 
 ### Project Structure
 
@@ -388,6 +366,7 @@ Tests cover ScriptCat cross-domain multi-account discovery, same-account dedupli
 ├── AGENTS.md                              # Agent maintenance entry (not end-user install docs)
 ├── .github/workflows/
 │   ├── checkin.yml                        # Scheduled + manual check-in
+│   ├── keepalive.yml                       # 30-day repository activity marker
 │   └── test.yml                           # Push / PR tests
 ├── Surge/
 │   └── glados-auto-checkin.sgmodule       # Surge module

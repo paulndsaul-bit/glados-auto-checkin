@@ -482,20 +482,33 @@ function testWorkflowYamlStructure() {
   assert.match(text, /^name:\s*GLaDOS Check-in/m);
   assert.match(text, /workflow_dispatch:/);
   assert.match(text, /schedule:/);
-  assert.match(text, /cron:\s*"15 23 \* \* \*"/);
-  assert.match(text, /cron:\s*"15 7 \* \* \*"/);
+  assert.match(text, /cron:\s*"30 1 \* \* \*"/);
   assert.match(text, /permissions:\s*\n\s*contents:\s*read/);
   assert.match(text, /node-version:\s*24/);
   assert.match(text, /secrets\.GLADOS_COOKIE/);
   assert.match(text, /node cli\/checkin\.js/);
   assert.match(text, /北京时间|Beijing/i);
-  assert.match(text, /07:15/);
-  assert.match(text, /15:15/);
+  assert.match(text, /09:30/);
   // Must not hardcode real cookies
   assert.doesNotMatch(text, /koa:sess=[A-Za-z0-9._-]+/);
   // Minimal permissions only
   assert.doesNotMatch(text, /contents:\s*write/);
   assert.doesNotMatch(text, /permissions:\s*write-all/);
+}
+
+function testKeepaliveWorkflowStructure() {
+  const workflowPath = path.join(__dirname, ".github/workflows/keepalive.yml");
+  const text = fs.readFileSync(workflowPath, "utf8");
+
+  assert.match(text, /^name:\s*Repository Keepalive/m);
+  assert.match(text, /workflow_dispatch:/);
+  assert.match(text, /cron:\s*"45 2 \* \* \*"/);
+  assert.match(text, /contents:\s*write/);
+  assert.match(text, /\.github\/keepalive\/last-run\.txt/);
+  assert.match(text, /2592000/);
+  assert.match(text, /git commit -m "chore: update keepalive marker"/);
+  assert.match(text, /git push/);
+  assert.doesNotMatch(text, /GLADOS_COOKIE|koa:sess=/);
 }
 
 function testPackageScriptsAndVersion() {
@@ -543,6 +556,7 @@ async function run() {
     ["login expired exit 1", testLoginExpiredExitOne],
     ["main --help", testMainHelp],
     ["workflow YAML structure", testWorkflowYamlStructure],
+    ["keepalive workflow structure", testKeepaliveWorkflowStructure],
     ["package scripts/version", testPackageScriptsAndVersion],
     ["existing scripts dynamic token", testExistingScriptsUseDynamicToken],
   ];
